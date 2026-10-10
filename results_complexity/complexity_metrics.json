@@ -1,0 +1,56 @@
+{
+  "DBFN-concat": {
+    "params_total_M": 110.883655,
+    "params_trainable_M": 1.576967,
+    "gflops": 43.303542272,
+    "size_mb": 423.190616607666,
+    "latency_ms_bs1": 6.570075899362564,
+    "fps_bs64": 381.5051401782516
+  },
+  "DBFN-cross_attn": {
+    "params_total_M": 114.039111,
+    "params_trainable_M": 4.732423,
+    "gflops": 43.309837824,
+    "size_mb": 435.227725982666,
+    "latency_ms_bs1": 7.3212747275829315,
+    "fps_bs64": 378.37084883758234
+  },
+  "ResNet-50": {
+    "params_total_M": 23.522375,
+    "params_trainable_M": 23.522375,
+    "gflops": 8.174301184,
+    "size_mb": 89.93378067016602,
+    "latency_ms_bs1": 3.6106663942337036,
+    "fps_bs64": 2779.869089757524
+  },
+  "ViT-Base": {
+    "params_total_M": 85.804039,
+    "params_trainable_M": 85.804039,
+    "gflops": 35.1261312,
+    "size_mb": 327.31643295288086,
+    "latency_ms_bs1": 4.643065482378006,
+    "fps_bs64": 435.6930303987381
+  },
+  "TTA_cost_DBFN_concat": {
+    "none": {
+      "passes": 1,
+      "ms_per_image": 6.570075899362564,
+      "fps": 152.20524318402792
+    },
+    "hflip": {
+      "passes": 2,
+      "ms_per_image": 8.69511604309082,
+      "fps": 115.00709076730547
+    },
+    "5crop": {
+      "passes": 5,
+      "ms_per_image": 16.915199607610703,
+      "fps": 59.11842740242138
+    },
+    "10crop": {
+      "passes": 10,
+      "ms_per_image": 31.413363963365555,
+      "fps": 31.833585259006508
+    }
+  }
+}
