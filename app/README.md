@@ -24,6 +24,8 @@ Application de démonstration du mémoire : reconnaissance des expressions facia
 
 Latence mesurée sur CPU (Apple M3 Max, 4 threads) : 22 ms par visage pour ResNet-50, 42 ms pour ViT-Base, 63 ms pour le DBFN, 120 ms pour les trois.
 
+**Accélération ONNX Runtime** (`EMOVISION_BACKEND=onnx`, après `python app/tools/export_onnx.py`) : prédictions identiques à PyTorch (100 % d'accord sur 2 000 images de test), 8 à 22 % plus rapide selon le processeur. La variante `onnx-int8` (ViT quantifié) est déconseillée : elle fait perdre 0,7 point d'exactitude au DBFN et modifie 3 % des prédictions.
+
 ## Lancer en local
 
 Depuis la racine du dépôt, après avoir placé les poids dans `app/weights/` (voir [weights/README.md](weights/README.md)) :
