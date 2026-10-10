@@ -19,7 +19,9 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pct = (v) => `${Math.round(v * 100)} %`;
 
-const state = { model: "dbfn", cfg: { crop_scale: 1.3, crop_dy: -0.05, max_faces: 8 }, view: "home" };
+// Modèle par vue : ResNet-50 en direct (le plus rapide sur CPU), DBFN ailleurs ; le choix de l'utilisateur est mémorisé par vue.
+const DEFAULT_MODEL = { live: "resnet" };
+const state = { model: "dbfn", modelByView: {}, cfg: { crop_scale: 1.3, crop_dy: -0.05, max_faces: 8 }, view: "home" };
 const langHooks = [];
 
 // =====================================================================
@@ -40,6 +42,8 @@ function route() {
   if (state.view === "live" && name !== "live") live.stop();
   if (state.view === "challenge" && name !== "challenge") challenge.abort();
   state.view = name;
+  const m = state.modelByView[name] || DEFAULT_MODEL[name] || "dbfn";
+  if (m !== state.model) setModel(m);
   $$(".view").forEach((s) => s.classList.toggle("on", s.id === `view-${name}`));
   $$(".nav a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#${name}`));
   if (name === "home") refreshStats();
@@ -48,6 +52,7 @@ function route() {
 
 function setModel(m) {
   state.model = m;
+  state.modelByView[state.view] = m;
   $$("#modelSeg button").forEach((b) => b.classList.toggle("on", b.dataset.model === m));
   $("#modelSel").value = m;
   live.onModel();
