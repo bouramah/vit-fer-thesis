@@ -1,0 +1,19 @@
+# Liste blanche : tout est ignoré sauf le code, la documentation et les résultats légers.
+# Les jeux de données (licences) et les checkpoints (volumineux) ne sont jamais versionnés.
+/*
+!/.gitignore
+!/README.md
+!/GUIDE.md
+!/RESULTS.md
+!/requirements.txt
+!/*.py
+!/best_models.sh
+!/recreate_data_symlinks.sh
+!/models/
+!/utils/
+!/results_complexity/
+!/results_interpretability/
+
+__pycache__/
+*.pyc
+.DS_Store
