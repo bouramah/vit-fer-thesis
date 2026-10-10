@@ -429,16 +429,13 @@ const photo = (() => {
       feedbackWidget($(".fb", card), main.top, (label) => { f.true_label = label; });
       host.appendChild(card);
     }
-    if (faces.length) {
-      const btn = document.createElement("button");
-      btn.className = "btn primary"; btn.textContent = `🙌 ${t("contrib.btn")}`;
-      btn.addEventListener("click", () => openConsent(faces.map((f) => ({
-        image: f.crop, source, true_label: f.true_label || null,
-        predictions: { resnet: f.resnet, vit: f.vit, dbfn: f.dbfn },
-      }))));
-      host.appendChild(btn);
-    }
+    $("#photoBar").hidden = !faces.length;
+    $("#photoBarInfo").textContent = `${faces.length} ${t("live.faces")}`;
   }
+  $("#photoContrib").addEventListener("click", () => openConsent(faces.map((f) => ({
+    image: f.crop, source, true_label: f.true_label || null,
+    predictions: { resnet: f.resnet, vit: f.vit, dbfn: f.dbfn },
+  }))));
   async function explain(f) {
     const r = await api("/api/explain", { face: f.crop });
     $("#exFace").src = f.crop; $("#exCam").src = r.overlay;
@@ -608,6 +605,7 @@ let pendingItems = [];
 function openConsent(items) {
   pendingItems = items;
   $("#consentForm").hidden = false; $("#consentOk").hidden = true; $("#cErr").hidden = true;
+  $("#cCopy").textContent = t("c.copy");
   ["#cAdult", "#cSelf", "#cMemoire", "#cPub"].forEach((s) => ($(s).checked = false));
   $("#consentThumbs").innerHTML = items.map((it) => `<img src="${it.image}" alt="">`).join("");
   updateConsentBtn();
@@ -630,6 +628,16 @@ $("#cSubmit").addEventListener("click", async () => {
 });
 $("#cCopy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("#cCode").textContent); $("#cCopy").textContent = t("c.copied"); } catch {}
+});
+$("#cSave").addEventListener("click", () => {
+  const code = $("#cCode").textContent;
+  const txt = `EmoVision — ${t("c.receipt")}\n\n${t("c.receipt.code")} : ${code}\n${t("c.receipt.date")} : ${new Date().toLocaleString(getLang())}\n`
+    + `${t("c.receipt.n")} : ${pendingItems.length}\n\n${t("c.ok.d")}\n${location.origin}/#about\n`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([txt], { type: "text/plain;charset=utf-8" }));
+  a.download = `emovision-${code}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 $("#cClose").addEventListener("click", () => $("#consentDlg").close());
 

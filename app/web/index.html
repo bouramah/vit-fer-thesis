@@ -95,6 +95,10 @@
       <div class="faces" id="photoFaces"></div>
     </div>
     <p class="muted center" id="photoMsg"></p>
+    <div class="actionbar" id="photoBar" hidden>
+      <span id="photoBarInfo"></span>
+      <button class="btn primary" id="photoContrib">🙌 <span data-i18n="contrib.btn"></span></button>
+    </div>
   </section>
 
   <!-- ======================= DÉFI ======================= -->
@@ -126,9 +130,9 @@
       <p class="score"><b id="chScore"></b> / 7 <span data-i18n="ch.score"></span></p>
       <p class="muted" data-i18n="ch.recap.hint"></p>
       <div class="recap" id="chRecap"></div>
-      <div class="row center">
-        <button class="btn primary" id="chContrib" data-i18n="contrib.btn"></button>
+      <div class="actionbar">
         <button class="btn ghost" id="chAgain" data-i18n="ch.again"></button>
+        <button class="btn primary" id="chContrib">🙌 <span data-i18n="contrib.btn"></span></button>
       </div>
     </div>
   </section>
@@ -196,7 +200,7 @@
     <h2 data-i18n="c.ok.t"></h2>
     <p data-i18n="c.ok.d"></p>
     <div class="code" id="cCode"></div>
-    <div class="row center"><button class="btn" id="cCopy" data-i18n="c.copy"></button><button class="btn primary" id="cClose">OK</button></div>
+    <div class="row center"><button class="btn" id="cCopy" data-i18n="c.copy"></button><button class="btn" id="cSave" data-i18n="c.save"></button><button class="btn primary" id="cClose">OK</button></div>
   </div>
 </dialog>
 
