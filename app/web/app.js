@@ -191,9 +191,11 @@ class Tracker {
         for (const k of ["x", "y", "w", "h"]) best.box[k] += gain * (d[k] - best.box[k]);
         best[src === "mp" ? "mpSeen" : "srvSeen"] = now;
         if (d.res) smooth(best, d.res);
+        if (d.shot) best.shot = d.shot;
       } else if (src === "srv") {
         const tr = { id: this.nextId++, box: { x: d.x, y: d.y, w: d.w, h: d.h }, srvSeen: now, mpSeen: 0, res: null };
         if (d.res) smooth(tr, d.res);
+        if (d.shot) tr.shot = d.shot;
         this.tracks.push(tr);
         used.add(tr);
       }
@@ -278,19 +280,24 @@ class LiveEngine {
   }
   async analyzeFrame() {
     // YuNet côté serveur : détection de tous les visages (même éloignés) + prédiction, recadrage identique au mode photo.
-    const vw = video.videoWidth, vh = video.videoHeight;
+    const vw = video.videoWidth, vh = video.videoHeight, t = performance.now();
+    // L'image analysée est conservée en pleine résolution : le défi enregistre exactement ce que le modèle a vu.
+    const full = document.createElement("canvas");
+    full.width = vw; full.height = vh;
+    full.getContext("2d").drawImage(video, 0, 0, vw, vh);
     const w = Math.min(SERVER_WIDTH, vw), h = Math.round((vh / vw) * w);
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
-    c.getContext("2d").drawImage(video, 0, 0, w, h);
+    c.getContext("2d").drawImage(full, 0, 0, w, h);
     const r = await api("/api/analyze", { image: c.toDataURL("image/jpeg", 0.85), model: this.modelFn() });
     if (video.videoWidth !== vw || video.videoHeight !== vh) return;   // la vidéo a changé de format entre-temps
     const k = vw / w;
     this.latency = r.latency_ms;
-    this.tracker.update(r.faces.map((f) => ({
-      x: f.box[0] * k, y: f.box[1] * k, w: f.box[2] * k, h: f.box[3] * k,
-      res: Object.fromEntries(["resnet", "vit", "dbfn"].filter((m) => f[m]).map((m) => [m, f[m]])),
-    })), performance.now(), "srv", 0.7);
+    this.tracker.update(r.faces.map((f) => {
+      const box = { x: f.box[0] * k, y: f.box[1] * k, w: f.box[2] * k, h: f.box[3] * k };
+      const res = Object.fromEntries(["resnet", "vit", "dbfn"].filter((m) => f[m]).map((m) => [m, f[m]]));
+      return { ...box, res, shot: { frame: full, box, res, t } };
+    }), performance.now(), "srv", 0.7);
   }
   pick(e) {
     const r = this.canvas.getBoundingClientRect();
@@ -550,8 +557,9 @@ const challenge = (() => {
     stepStart = performance.now(); holdStart = 0; best = null;
   }
 
-  function snapshot(tr) {
-    return { image: cropToDataURL(video, tr.box, 448), predictions: JSON.parse(JSON.stringify(tr.res)) };
+  // Image et prédiction proviennent de la même analyse serveur (pas de l'image vidéo du moment, ni des probabilités lissées).
+  function fromShot(shot) {
+    return { image: cropToDataURL(shot.frame, shot.box, 448), predictions: JSON.parse(JSON.stringify(shot.res)) };
   }
 
   eng.onFrame = (now) => {
@@ -562,8 +570,13 @@ const challenge = (() => {
     $("#chRing").style.setProperty("--p", Math.round(p * 100));
     const left = Math.max(0, 1 - (now - stepStart) / LIMIT_MS);
     $("#chTimer").style.width = `${left * 100}%`;
-    // Meilleure tentative, en ignorant le début de l'étape (la personne affiche encore l'expression précédente).
-    if (now - stepStart > GRACE_MS && tr && tr.res && tr.res.dbfn && (!best || p > best.p + 0.03)) best = { p, ...snapshot(tr) };
+    // Meilleure analyse de l'étape, en ignorant les images prises pendant le délai de grâce
+    // (la personne affiche encore l'expression précédente).
+    const shot = tr && tr.shot;
+    if (shot && shot.res.dbfn && shot.t - stepStart > GRACE_MS) {
+      const ps = shot.res.dbfn.probs[CLASSES.indexOf(target)];
+      if (!best || ps > best.p) best = { p: ps, shot };
+    }
     if (p >= THRESH) {
       holdStart = holdStart || now;
       if (now - holdStart >= HOLD_MS) finishStep(true, tr);
@@ -575,7 +588,8 @@ const challenge = (() => {
     busy = true;
     const target = seq[step];
     // Émotion passée volontairement : rien n'est conservé (la personne ne l'a pas tentée).
-    const shot = skipped ? null : success && tr ? snapshot(tr) : best;
+    const pick = skipped ? null : best ? best.shot : success && tr && tr.shot ? tr.shot : null;
+    const shot = pick ? fromShot(pick) : null;
     results.push({ target, success, skipped, ...(shot || { image: null, predictions: null }) });
     if (success) { flash(); burst(EMOTIONS[target].emoji); }
     await sleep(success ? 900 : 200);
