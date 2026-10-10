@@ -39,7 +39,23 @@ RAF-DB et AffectNet sont distribués par leurs auteurs sur demande, pour un usag
 
 ## 3. Reproduire le résultat principal (sans ré-entraîner)
 
-Télécharger depuis la [Release v1.0](https://github.com/bouramah/vit-fer-thesis/releases) le checkpoint du DBFN de référence et le placer ainsi :
+La [Release v1.0](https://github.com/bouramah/vit-fer-thesis/releases/tag/v1.0) fournit trois checkpoints (FER2013) :
+
+| Fichier | Contenu | Emplacement attendu |
+|---|---|---|
+| `dbfn_concat_frozen_20260227_173625_epoch1_best.pth` | DBFN complet (backbones + tête), 73,86 % | `checkpoints_hybrid/` |
+| `resnet50_v2_epoch61_best.pth` | backbone ResNet-50, 70,35 % | `checkpoints_run3_resnet50/` |
+| `vit_base_v3_epoch86_best.pth` | backbone ViT-Base, 72,64 % (poids seuls, sans l'état de l'optimiseur) | `checkpoints_vit_base_v3_run1/` |
+
+Pour reproduire le résultat principal, seul le premier est nécessaire :
+
+```bash
+mkdir -p checkpoints_hybrid
+curl -L -o checkpoints_hybrid/dbfn_concat_frozen_20260227_173625_epoch1_best.pth \
+  https://github.com/bouramah/vit-fer-thesis/releases/download/v1.0/dbfn_concat_frozen_20260227_173625_epoch1_best.pth
+```
+
+Ce qui donne :
 
 ```
 checkpoints_hybrid/dbfn_concat_frozen_20260227_173625_epoch1_best.pth
@@ -53,7 +69,7 @@ python evaluate_hybrid_tta.py --data_dir data/fer2013 --fusion concat --tta none
   --num_workers 0
 ```
 
-Résultat attendu : **Accuracy 73,86 %, Macro-F1 72,71 %** (vérifié, environ 2 minutes sur Apple M3 Max avec `--device mps`). Avec `--tta 10crop` : 74,17 % / 73,02 %.
+Résultat attendu : **Accuracy 73,86 %, Macro-F1 72,71 %** (vérifié depuis un clone neuf ; environ 2 minutes sur Apple M3 Max, où `--device auto` sélectionne le GPU Apple). Avec `--tta 10crop` : 74,17 % / 73,02 %.
 
 > **macOS / Windows :** utiliser `--num_workers 0`. Avec plusieurs workers, le script s'interrompt (erreur `Can't get local object 'main.<locals>.collate_pil'`), car ces systèmes lancent les workers en mode *spawn*. Sous Linux, la valeur par défaut fonctionne.
 
@@ -95,8 +111,9 @@ Durée indicative sur une A100 : environ 20 minutes pour la tête de fusion, plu
 ## 5. Analyses
 
 ```bash
-# Complexité : paramètres, GFLOPs, taille, latence, débit (aucun checkpoint requis)
-python benchmark_complexity.py --device cuda
+# Complexité : paramètres, GFLOPs, taille, latence, débit (aucun checkpoint requis ;
+# télécharge les poids ImageNet de ViT-Base au premier lancement)
+python benchmark_complexity.py --device cuda      # ou --device cpu / mps
 
 # Complémentarité entre branches + Grad-CAM
 python complementarity_dbfn.py --data_dir data/fer2013 \
@@ -106,6 +123,11 @@ python complementarity_dbfn.py --data_dir data/fer2013 \
 # (checkpoints_run3_resnet50/... et checkpoints_vit_base_v3_run1/..., fournis dans la Release)
 python attention_compare.py
 ```
+
+Remarques :
+
+- `complementarity_dbfn.py` et `attention_compare.py` utilisent CUDA, ou le CPU à défaut (pas le GPU Apple). Sans GPU NVIDIA, `attention_compare.py` prend environ 20 minutes, car il traite les 7 178 images de test une par une.
+- Le nombre de paramètres et la taille des modèles sont indépendants de l'environnement. Les GFLOPs dépendent en revanche de la version de PyTorch, dont le compteur d'opérations traite l'attention différemment selon les versions : 43,3 GFLOPs pour le DBFN avec PyTorch 2.5.1 (valeur du mémoire), environ 41,9 avec PyTorch 2.14. Les latences dépendent du matériel (A100 dans le mémoire).
 
 ## 6. Démo (image ou webcam)
 
