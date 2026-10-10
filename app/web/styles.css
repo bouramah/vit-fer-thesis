@@ -151,7 +151,7 @@ input:not([type]), input[type=text] { font: inherit; padding: 10px 12px; border-
   .ch-side { order: -1; padding: 10px 12px; gap: 6px; }
   .ch-target { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; text-align: left; }
   .ch-target .ring { grid-column: 1; grid-row: 1 / 4; width: 84px; height: 84px; margin: 0; }
-  .ring-in { width: 70px; height: 70px; font-size: 38px; }
+  .ch-target .ring-in { width: 70px; height: 70px; font-size: 38px; }
   .ch-target > span, .ch-target h2, .ch-target p { grid-column: 2; margin: 0; }
   .ch-target h2 { font-size: 20px; }
   .ch-target p { font-size: 13px; line-height: 1.35; }

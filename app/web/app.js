@@ -229,13 +229,21 @@ class LiveEngine {
   async start() {
     await startCamera();
     const det = await getDetector();
-    this.canvas.width = video.videoWidth; this.canvas.height = video.videoHeight;
+    this.fit();
     this.canvas.hidden = false;
-    this.canvas.parentElement.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
     this.running = true;
     this.tracker = new Tracker();
     this.loopDetect(det);
     this.loopInfer();
+  }
+  // Sur téléphone, les dimensions de la vidéo changent après le démarrage (passage en portrait, changement de caméra) :
+  // le canvas doit les suivre, sinon les cadres sont dessinés dans un autre repère que l'image.
+  fit() {
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h || (this.canvas.width === w && this.canvas.height === h)) return;
+    this.canvas.width = w; this.canvas.height = h;
+    this.canvas.parentElement.style.aspectRatio = `${w} / ${h}`;
+    this.tracker = new Tracker();
   }
   stop() { this.running = false; this.canvas.hidden = true; this.canvas.parentElement.style.aspectRatio = ""; }
   loopDetect(det) {
@@ -270,12 +278,14 @@ class LiveEngine {
   }
   async analyzeFrame() {
     // YuNet côté serveur : détection de tous les visages (même éloignés) + prédiction, recadrage identique au mode photo.
-    const w = Math.min(SERVER_WIDTH, video.videoWidth), h = Math.round((video.videoHeight / video.videoWidth) * w);
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const w = Math.min(SERVER_WIDTH, vw), h = Math.round((vh / vw) * w);
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
     c.getContext("2d").drawImage(video, 0, 0, w, h);
     const r = await api("/api/analyze", { image: c.toDataURL("image/jpeg", 0.85), model: this.modelFn() });
-    const k = video.videoWidth / w;
+    if (video.videoWidth !== vw || video.videoHeight !== vh) return;   // la vidéo a changé de format entre-temps
+    const k = vw / w;
     this.latency = r.latency_ms;
     this.tracker.update(r.faces.map((f) => ({
       x: f.box[0] * k, y: f.box[1] * k, w: f.box[2] * k, h: f.box[3] * k,
@@ -294,6 +304,7 @@ class LiveEngine {
     return vis.find((tr) => tr.id === this.selected) || this.tracker.largest(now);
   }
   draw(now) {
+    this.fit();
     const { ctx, canvas } = this;
     const W = canvas.width;
     ctx.save();
