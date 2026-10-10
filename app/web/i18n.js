@@ -32,7 +32,7 @@ const T = {
     "live.panel": "Visage sélectionné", "live.panel.hint": "Touchez un visage pour le sélectionner.",
     "cam.error": "Impossible d'accéder à la caméra. Vérifiez l'autorisation du navigateur.",
    
-    "photo.drop": "Glissez une photo ici ou", "photo.choose": "choisissez une photo", "photo.snap": "Prendre une photo",
+    "photo.drop": "Glissez une photo ici ou", "photo.choose": "choisissez une photo", "photo.snap": "Prendre une photo", "cam.title": "Prendre une photo", "cam.hint": "Placez votre visage dans le cadre. La photo est prise 3 secondes après avoir appuyé sur Déclencher.", "cam.shoot": "Déclencher", "cam.switch": "Changer de caméra",
     "photo.analyzing": "Analyse en cours…", "photo.none": "Aucun visage détecté sur cette photo.",
     "photo.face": "Visage", "photo.explain": "Expliquer", "photo.explain.t": "Zones qui ont le plus pesé dans la décision du DBFN (Grad-CAM, branche ResNet-50).",
     "fb.q": "La prédiction est-elle juste ?", "fb.yes": "Oui", "fb.no": "Non", "fb.which": "Quelle émotion était-ce ?", "fb.thanks": "Merci pour votre retour !",
@@ -94,7 +94,7 @@ const T = {
     "live.panel": "Selected face", "live.panel.hint": "Tap a face to select it.",
     "cam.error": "Cannot access the camera. Please check your browser permission.",
    
-    "photo.drop": "Drop a photo here or", "photo.choose": "choose a photo", "photo.snap": "Take a photo",
+    "photo.drop": "Drop a photo here or", "photo.choose": "choose a photo", "photo.snap": "Take a photo", "cam.title": "Take a photo", "cam.hint": "Fit your face in the frame. The photo is taken 3 seconds after you press Shoot.", "cam.shoot": "Shoot", "cam.switch": "Switch camera",
     "photo.analyzing": "Analysing…", "photo.none": "No face detected in this photo.",
     "photo.face": "Face", "photo.explain": "Explain", "photo.explain.t": "Regions that weighed most in the DBFN decision (Grad-CAM, ResNet-50 branch).",
     "fb.q": "Is the prediction right?", "fb.yes": "Yes", "fb.no": "No", "fb.which": "Which emotion was it?", "fb.thanks": "Thanks for your feedback!",

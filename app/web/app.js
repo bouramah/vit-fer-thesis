@@ -109,17 +109,19 @@ function renderBars(host, res, extra = "") {
 // Caméra et détection de visages
 // =====================================================================
 const video = $("#video");
-let stream = null;
-async function startCamera() {
-  if (stream) return;
-  stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, audio: false });
+let stream = null, streamFacing = null;
+async function startCamera(facing = "user") {
+  if (stream && streamFacing === facing) return;
+  if (stream) stopCamera();
+  stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facing }, audio: false });
+  streamFacing = facing;
   video.srcObject = stream;
   await video.play();
   while (!video.videoWidth) await sleep(30);
 }
 function stopCamera() {
   if (stream) stream.getTracks().forEach((tr) => tr.stop());
-  stream = null;
+  stream = null; streamFacing = null;
   video.srcObject = null;
 }
 
@@ -453,15 +455,42 @@ const photo = (() => {
   drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) readFile(f); });
   $("#fileIn").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) readFile(f); e.target.value = ""; });
   function readFile(file) { const r = new FileReader(); r.onload = () => load(r.result, "photo"); r.readAsDataURL(file); }
-  $("#photoSnap").addEventListener("click", async () => {
+  // Prise de photo avec aperçu : la personne se voit, déclenche elle-même (compte à rebours de 3 s).
+  let facing = "user", shooting = false;
+  async function openCam() {
     try {
-      await startCamera(); await sleep(500);
-      const c = document.createElement("canvas");
-      c.width = video.videoWidth; c.height = video.videoHeight;
-      c.getContext("2d").drawImage(video, 0, 0);
-      stopCamera();
-      load(c.toDataURL("image/jpeg", 0.92), "snapshot");
+      await startCamera(facing);
+      const pv = $("#camPreview");
+      pv.srcObject = stream;
+      pv.classList.toggle("mirror", facing === "user");
+      await pv.play().catch(() => {});
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+      $("#camSwitch").hidden = cams.length < 2;
+      if (!$("#camDlg").open) $("#camDlg").showModal();
     } catch { $("#photoMsg").textContent = t("cam.error"); }
+  }
+  function closeCam() { $("#camDlg").close(); stopCamera(); shooting = false; $("#camCount").hidden = true; }
+  $("#photoSnap").addEventListener("click", () => { facing = "user"; openCam(); });
+  $("#camSwitch").addEventListener("click", () => { facing = facing === "user" ? "environment" : "user"; openCam(); });
+  $("#camCancel").addEventListener("click", closeCam);
+  $("#camDlg").addEventListener("cancel", () => { stopCamera(); shooting = false; });
+  $("#camShoot").addEventListener("click", async () => {
+    if (shooting) return;
+    shooting = true;
+    const cnt = $("#camCount");
+    for (const n of [3, 2, 1]) {
+      cnt.hidden = false; cnt.textContent = n; cnt.style.animation = "none"; void cnt.offsetWidth; cnt.style.animation = "";
+      await sleep(900);
+      if (!shooting) return;
+    }
+    cnt.hidden = true;
+    const f = $("#camFlash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+    const c = document.createElement("canvas");
+    c.width = video.videoWidth; c.height = video.videoHeight;
+    c.getContext("2d").drawImage(video, 0, 0);
+    await sleep(250);
+    closeCam();
+    load(c.toDataURL("image/jpeg", 0.92), "snapshot");
   });
   langHooks.push(render);
   return { load, onModel: () => { if (state.view === "photo") analyze(); } };

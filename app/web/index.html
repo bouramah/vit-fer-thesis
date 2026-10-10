@@ -220,6 +220,21 @@
   </div>
 </dialog>
 
+<dialog id="camDlg" class="dlg narrow cam-dlg">
+  <h2 data-i18n="cam.title"></h2>
+  <div class="cam-wrap">
+    <video id="camPreview" playsinline muted autoplay></video>
+    <div class="cam-count" id="camCount" hidden></div>
+    <div class="flash" id="camFlash"></div>
+  </div>
+  <p class="muted small center" data-i18n="cam.hint"></p>
+  <div class="row center">
+    <button class="btn ghost" id="camCancel" data-i18n="c.cancel"></button>
+    <button class="btn" id="camSwitch">🔄 <span data-i18n="cam.switch"></span></button>
+    <button class="btn primary" id="camShoot">📸 <span data-i18n="cam.shoot"></span></button>
+  </div>
+</dialog>
+
 <dialog id="explainDlg" class="dlg narrow">
   <h2 data-i18n="photo.explain"></h2>
   <p class="muted small" data-i18n="photo.explain.t"></p>

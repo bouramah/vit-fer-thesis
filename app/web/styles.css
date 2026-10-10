@@ -186,7 +186,7 @@ input:not([type]), input[type=text] { font: inherit; padding: 10px 12px; border-
 .actionbar { position: sticky; bottom: 12px; z-index: 5; display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;
   margin: 18px auto 0; padding: 12px 16px; max-width: 640px; border-radius: 18px; border: 1px solid var(--card-b);
   background: rgba(17, 24, 51, .88); backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
-.actionbar span { color: var(--muted); font-size: 14px; }
+.actionbar > span { color: var(--muted); font-size: 14px; }
 
 /* ---------- dialogues ---------- */
 .dlg { max-width: 640px; width: calc(100% - 32px); border: 1px solid var(--card-b); border-radius: 22px; background: var(--bg2); color: var(--txt); padding: 24px; }
@@ -200,6 +200,14 @@ input:not([type]), input[type=text] { font: inherit; padding: 10px 12px; border-
 .code { font-family: ui-monospace, Menlo, monospace; font-size: 26px; letter-spacing: .08em; padding: 14px; border-radius: 14px; background: rgba(0, 0, 0, .3); margin: 14px 0; }
 .explain-imgs { display: flex; gap: 10px; justify-content: center; }
 .explain-imgs img { width: 46%; border-radius: 14px; }
+
+/* ---------- aperçu caméra ---------- */
+.cam-wrap { position: relative; border-radius: 16px; overflow: hidden; background: #000; }
+.cam-wrap video { width: 100%; display: block; max-height: 60vh; object-fit: cover; }
+.cam-wrap video.mirror { transform: scaleX(-1); }
+.cam-count { position: absolute; inset: 0; display: grid; place-items: center; font-size: 96px; font-weight: 800; color: #fff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, .6); animation: pop .9s ease; }
+@keyframes pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ---------- guide ---------- */
 .tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 18px 0; }
