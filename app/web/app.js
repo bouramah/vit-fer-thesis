@@ -639,12 +639,60 @@ const challenge = (() => {
 // =====================================================================
 // Guide des émotions
 // =====================================================================
+// Visages illustrés : chaque dessin reprend les indices décrits dans la fiche (sourcils, yeux, bouche, rides).
+const FACE = {
+  //            sourcils : [y extérieur, y intérieur, y contrôle, x intérieur], yeux : [ry, décalage iris], bouche
+  neutral:  { brows: [50, 50, 47, 52], eyes: [5, 0], mouth: `<path d="M48 99 Q60 100 72 99" class="ln"/>` },
+  angry:    { brows: [45, 57, 50, 55], eyes: [4, 1], lid: "angry",
+              extra: `<path d="M57 52 L58 58 M63 52 L62 58" class="th"/>`,
+              mouth: `<path d="M45 101 Q60 96 75 101 Q60 103 45 101 Z" class="mo"/><path d="M48 100.5 Q60 98 72 100.5" class="tw"/>` },
+  disgust:  { brows: [50, 54, 50, 53], eyes: [3, 0], lid: "squint",
+              extra: `<path d="M53 72 Q55 70 57 72 M63 72 Q65 70 67 72 M52 76 Q54 74 56 76 M64 76 Q66 74 68 76" class="th"/>`,
+              mouth: `<path d="M46 101 Q52 92 58 96 Q62 93 68 94 Q73 96 74 101 Q60 104 46 101 Z" class="mo"/><path d="M52 97 Q60 95 70 96" class="tw"/>` },
+  fear:     { brows: [45, 41, 44, 53], eyes: [8, 2],
+              extra: `<path d="M53 33 Q60 35 67 33 M54 37 Q60 39 66 37" class="th"/>`,
+              mouth: `<path d="M41 100 Q60 95 79 100 Q60 109 41 100 Z" class="mo"/><path d="M44 99.5 Q60 97 76 99.5" class="tw"/>` },
+  happy:    { brows: [49, 49, 45, 52], eyes: [0, 0], lid: "smile",
+              extra: `<circle cx="36" cy="80" r="7" class="ck"/><circle cx="84" cy="80" r="7" class="ck"/><path d="M24 62 L20 60 M24 66 L20 67 M96 62 L100 60 M96 66 L100 67" class="th"/>`,
+              mouth: `<path d="M40 93 Q60 120 80 93 Q60 99 40 93 Z" class="mo"/><path d="M42 94 Q60 100 78 94 L77 98 Q60 103 43 98 Z" class="tw"/>` },
+  sad:      { brows: [51, 42, 47, 52], eyes: [4, 1], lid: "sad",
+              extra: `<path d="M54 117 Q60 113 66 117" class="th"/>`,
+              mouth: `<path d="M46 105 Q60 94 74 105" class="ln"/>` },
+  surprise: { brows: [44, 44, 33, 52], eyes: [8, 1],
+              extra: `<path d="M44 30 Q60 27 76 30 M46 35 Q60 32 74 35" class="th"/>`,
+              mouth: `<ellipse cx="60" cy="104" rx="8" ry="11" class="mo"/>` },
+};
+function eyeSVG(cx, f, side) {
+  const [ry, dy] = f.eyes;
+  if (f.lid === "smile") return `<path d="M${cx - 8} 65 Q${cx} 57 ${cx + 8} 65" class="ln"/>`;
+  let s = `<ellipse cx="${cx}" cy="64" rx="8" ry="${ry}" class="ew"/><circle cx="${cx}" cy="${64 + dy}" r="${Math.min(3.6, ry)}" class="ir"/>`;
+  const o = cx + side * 9, i = cx - side * 9;   // coin extérieur / intérieur
+  if (f.lid === "angry") s += `<path d="M${o} ${64 - ry} L${i} ${64 - ry + 3}" class="ln"/>`;
+  if (f.lid === "sad") s += `<path d="M${i} ${63 - ry} L${o} ${66 - ry}" class="ln"/>`;
+  if (f.lid === "squint") s += `<path d="M${cx - 8} 68 Q${cx} 65 ${cx + 8} 68" class="ln"/>`;
+  return s;
+}
+function faceSVG(c, label) {
+  const f = FACE[c], [yo, yi, yc, xi] = f.brows;
+  const brow = (side) => {
+    const x = (v) => 60 + side * (v - 60);
+    return `<path d="M${x(28)} ${yo} Q${x(40)} ${yc} ${x(xi)} ${yi}" class="br"/>`;
+  };
+  return `<svg viewBox="0 0 120 140" role="img" aria-label="${label}">
+    <ellipse cx="60" cy="72" rx="44" ry="54" class="sk"/>
+    <path d="M16 72 Q12 16 60 16 Q108 16 104 72 Q102 30 60 28 Q18 30 16 72 Z" class="hr"/>
+    ${f.extra || ""}${brow(-1)}${brow(1)}${eyeSVG(42, f, -1)}${eyeSVG(78, f, 1)}
+    <path d="M60 70 Q57 82 54 85 Q60 88 66 85" class="ln"/>
+    ${f.mouth}
+  </svg>`;
+}
+
 const GUIDE_TIPS = ["guide.tip1", "guide.tip2", "guide.tip3", "guide.tip4"];
 function renderGuide() {
   $("#guideTips").innerHTML = GUIDE_TIPS.map((k) => `<div class="tip">${t(k)}</div>`).join("");
   $("#guideGrid").innerHTML = CLASSES.map((c) => `
     <article class="gcard" style="--c:${EMOTIONS[c].color}">
-      <header><span class="gemo">${EMOTIONS[c].emoji}</span><h3>${emoName(c)}</h3></header>
+      <header><div class="gface">${faceSVG(c, `${t("guide.illus")} ${emoName(c)}`)}</div><h3><span class="gemo">${EMOTIONS[c].emoji}</span> ${emoName(c)}</h3></header>
       <ul>
         <li><b>${t("guide.brows")}</b> ${t(`g.${c}.brows`)}</li>
         <li><b>${t("guide.eyes")}</b> ${t(`g.${c}.eyes`)}</li>

@@ -216,7 +216,21 @@ input:not([type]), input[type=text] { font: inherit; padding: 10px 12px; border-
 .gcard { padding: 18px; border-radius: var(--r); background: var(--card); border: 1px solid var(--card-b); border-top: 4px solid var(--c); }
 .gcard header { display: flex; align-items: center; gap: 12px; }
 .gcard h3 { margin: 0; font-size: 22px; }
-.gemo { font-size: 44px; }
+.gemo { font-size: 26px; }
+.gcard header { gap: 16px; }
+.gface { flex: 0 0 132px; height: 150px; border-radius: 16px; background: color-mix(in srgb, var(--c) 14%, transparent); display: grid; place-items: center; }
+.gface svg { width: 118px; height: 138px; }
+.gface .sk { fill: #f1c9a5; stroke: #8a5a3c; stroke-width: 1.5; }
+.gface .hr { fill: #3b2a20; }
+.gface .br { fill: none; stroke: #3b2a20; stroke-width: 4; stroke-linecap: round; }
+.gface .ln { fill: none; stroke: #5b3b2a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.gface .th { fill: none; stroke: #a0694a; stroke-width: 1.6; stroke-linecap: round; }
+.gface .ew { fill: #fff; stroke: #5b3b2a; stroke-width: 1.8; }
+.gface .ir { fill: #3b2a20; }
+.gface .mo { fill: #7a2e2a; stroke: #5b3b2a; stroke-width: 1.8; stroke-linejoin: round; }
+.gface .tw { fill: #fff; stroke: none; }
+.gface .tw:not([d$="Z"]) { fill: none; stroke: #fff; stroke-width: 2; }
+.gface .ck { fill: #f08f8f; opacity: .45; }
 .gcard ul { padding-left: 18px; margin: 12px 0; line-height: 1.5; font-size: 14px; }
 .gcard li { margin: 4px 0; }
 .gtip { font-size: 14px; margin: 8px 0 4px; }
