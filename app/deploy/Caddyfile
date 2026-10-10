@@ -1,0 +1,13 @@
+{$DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 20MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(self), microphone=()"
+	}
+	reverse_proxy emovision:8000
+}

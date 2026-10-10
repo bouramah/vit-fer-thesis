@@ -17,3 +17,11 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Application EmoVision : code versionné, poids et données exclus
+!/app/
+/app/weights/*
+!/app/weights/README.md
+/app/data/
+/app/web/_test/
+/app/deploy/.env

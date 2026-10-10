@@ -1,0 +1,36 @@
+# Déploiement sur un VPS : EmoVision + Caddy (HTTPS automatique Let's Encrypt).
+# 1. Pointer le nom de domaine (enregistrement A) vers l'IP du VPS.
+# 2. Copier app/deploy/.env.example en app/deploy/.env et le remplir.
+# 3. Depuis la racine du dépôt : docker compose -f app/deploy/docker-compose.yml up -d --build
+services:
+  emovision:
+    build:
+      context: ../..
+      dockerfile: app/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      EMOVISION_DATA: /data
+    volumes:
+      - emovision-data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - emovision
+
+volumes:
+  emovision-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EmoVision</title>
+  <meta name="description" content="EmoVision — reconnaissance des expressions faciales en direct (ResNet-50, ViT-Base, DBFN).">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🙂</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#home"><span class="brand-dot"></span>EmoVision</a>
+  <nav class="nav">
+    <a href="#home" data-i18n="nav.home"></a>
+    <a href="#live" data-i18n="nav.live"></a>
+    <a href="#photo" data-i18n="nav.photo"></a>
+    <a href="#challenge" data-i18n="nav.challenge"></a>
+    <a href="#about" data-i18n="nav.about"></a>
+  </nav>
+  <div class="tools">
+    <div class="seg" id="modelSeg" role="radiogroup" aria-label="Model">
+      <button data-model="resnet">ResNet-50</button>
+      <button data-model="vit">ViT-Base</button>
+      <button data-model="dbfn">DBFN</button>
+      <button data-model="compare" data-i18n="model.compare"></button>
+    </div>
+    <div class="seg small" id="langSeg">
+      <button data-lang="fr">FR</button>
+      <button data-lang="en">EN</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ======================= ACCUEIL ======================= -->
+  <section class="view" id="view-home">
+    <div class="hero">
+      <div class="hero-emojis" aria-hidden="true"><span>😠</span><span>🤢</span><span>😨</span><span>😄</span><span>😐</span><span>😢</span><span>😲</span></div>
+      <h1 data-i18n="hero.title"></h1>
+      <p class="lead" data-i18n="hero.sub"></p>
+    </div>
+    <div class="cards">
+      <a class="card" href="#live"><div class="card-ico">🎥</div><h3 data-i18n="card.live.t"></h3><p data-i18n="card.live.d"></p></a>
+      <a class="card" href="#photo"><div class="card-ico">🖼️</div><h3 data-i18n="card.photo.t"></h3><p data-i18n="card.photo.d"></p></a>
+      <a class="card accent" href="#challenge"><div class="card-ico">🏆</div><h3 data-i18n="card.challenge.t"></h3><p data-i18n="card.challenge.d"></p></a>
+    </div>
+    <div class="stats">
+      <div><b id="stContrib">–</b><span data-i18n="stats.contrib"></span></div>
+      <div><b id="stFeedback">–</b><span data-i18n="stats.feedback"></span></div>
+      <div><b id="stCorrect">–</b><span data-i18n="stats.correct"></span></div>
+    </div>
+    <p class="privacy-note">🔒 <span data-i18n="privacy.short"></span></p>
+  </section>
+
+  <!-- ======================= DIRECT ======================= -->
+  <section class="view" id="view-live">
+    <div class="live-grid">
+      <div class="stage-wrap">
+        <div class="stage" id="liveStage">
+          <canvas id="liveCanvas"></canvas>
+          <div class="stage-empty" id="liveEmpty">
+            <div class="big-ico">🎥</div>
+            <p data-i18n="live.hint"></p>
+            <button class="btn primary" id="liveStart" data-i18n="live.start"></button>
+          </div>
+        </div>
+        <div class="stage-bar">
+          <span class="pill" id="liveStatus">–</span>
+          <span class="spacer"></span>
+          <button class="btn" id="liveCapture" disabled>📸 <span data-i18n="live.capture"></span></button>
+          <button class="btn ghost" id="liveStop" disabled data-i18n="live.stop"></button>
+        </div>
+        <p class="warn" id="liveWarn" hidden></p>
+      </div>
+      <aside class="panel">
+        <h3 data-i18n="live.panel"></h3>
+        <p class="muted small" data-i18n="live.panel.hint"></p>
+        <div id="livePanel" class="bars-host"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ======================= PHOTO ======================= -->
+  <section class="view" id="view-photo">
+    <div class="drop" id="drop">
+      <div class="big-ico">🖼️</div>
+      <p><span data-i18n="photo.drop"></span> <label class="link"><input type="file" id="fileIn" accept="image/*" hidden><span data-i18n="photo.choose"></span></label></p>
+      <button class="btn" id="photoSnap">📸 <span data-i18n="photo.snap"></span></button>
+    </div>
+    <div class="photo-res" id="photoRes" hidden>
+      <div class="stage photo-stage"><canvas id="photoCanvas"></canvas></div>
+      <div class="faces" id="photoFaces"></div>
+    </div>
+    <p class="muted center" id="photoMsg"></p>
+  </section>
+
+  <!-- ======================= DÉFI ======================= -->
+  <section class="view" id="view-challenge">
+    <div id="chIntro" class="ch-intro">
+      <h1 data-i18n="ch.title"></h1>
+      <p class="lead" data-i18n="ch.intro"></p>
+      <div class="hero-emojis big" aria-hidden="true"><span>😠</span><span>🤢</span><span>😨</span><span>😄</span><span>😐</span><span>😢</span><span>😲</span></div>
+      <button class="btn primary xl" id="chStart" data-i18n="ch.start"></button>
+    </div>
+    <div id="chRun" class="ch-run" hidden>
+      <div class="stage" id="chStage"><canvas id="chCanvas"></canvas>
+        <div class="flash" id="chFlash"></div>
+      </div>
+      <div class="ch-side">
+        <div class="ch-step" id="chStep"></div>
+        <div class="ch-target">
+          <span class="muted" data-i18n="ch.show"></span>
+          <div class="ring" id="chRing"><div class="ring-in"><span id="chEmoji">😄</span></div></div>
+          <h2 id="chName"></h2>
+          <p class="muted" id="chTip"></p>
+        </div>
+        <div class="timer"><div id="chTimer"></div></div>
+        <button class="btn ghost" id="chSkip" data-i18n="ch.skip"></button>
+      </div>
+    </div>
+    <div id="chEnd" class="ch-end" hidden>
+      <h1 data-i18n="ch.done"></h1>
+      <p class="score"><b id="chScore"></b> / 7 <span data-i18n="ch.score"></span></p>
+      <p class="muted" data-i18n="ch.recap.hint"></p>
+      <div class="recap" id="chRecap"></div>
+      <div class="row center">
+        <button class="btn primary" id="chContrib" data-i18n="contrib.btn"></button>
+        <button class="btn ghost" id="chAgain" data-i18n="ch.again"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= À PROPOS ======================= -->
+  <section class="view prose" id="view-about">
+    <h1 data-i18n="about.title"></h1>
+    <p data-i18n="about.p1"></p>
+    <h2 data-i18n="about.models"></h2>
+    <ul>
+      <li data-i18n="about.m.resnet"></li>
+      <li data-i18n="about.m.vit"></li>
+      <li data-i18n="about.m.dbfn"></li>
+    </ul>
+    <h2 data-i18n="about.results"></h2>
+    <table class="results">
+      <thead><tr><th></th><th>FER2013</th><th>RAF-DB</th><th>AffectNet-7</th></tr></thead>
+      <tbody>
+        <tr><td>ResNet-50</td><td>70,35 %</td><td>84,39 %</td><td>56,86 %</td></tr>
+        <tr><td>ViT-Base</td><td>72,64 %</td><td>86,15 %</td><td>57,00 %</td></tr>
+        <tr class="hl"><td>DBFN</td><td>73,86 %</td><td>87,71 %</td><td>60,63 %</td></tr>
+      </tbody>
+    </table>
+    <p class="muted small">La démo utilise les modèles entraînés sur FER2013. / The demo uses the models trained on FER2013.</p>
+    <h2 data-i18n="about.limits"></h2>
+    <ul><li data-i18n="about.l1"></li><li data-i18n="about.l2"></li><li data-i18n="about.l3"></li></ul>
+    <h2 data-i18n="about.privacy"></h2>
+    <p data-i18n="about.pv"></p>
+    <div class="withdraw">
+      <h3 data-i18n="w.title"></h3>
+      <p class="muted" data-i18n="w.d"></p>
+      <div class="row"><input id="wCode" placeholder="XXXX-XXXX-XXXX" autocomplete="off"><button class="btn" id="wBtn" data-i18n="w.btn"></button></div>
+      <p id="wMsg" class="muted"></p>
+    </div>
+    <h2 data-i18n="about.code"></h2>
+    <p><a href="https://github.com/bouramah/vit-fer-thesis" target="_blank" rel="noopener">github.com/bouramah/vit-fer-thesis</a></p>
+    <p id="contactLine" hidden><b data-i18n="about.contact"></b> : <a id="contactMail"></a></p>
+  </section>
+</main>
+
+<!-- ======================= MODALES ======================= -->
+<dialog id="consentDlg" class="dlg">
+  <form method="dialog" id="consentForm">
+    <h2 data-i18n="c.title"></h2>
+    <div class="thumbs" id="consentThumbs"></div>
+    <p data-i18n="c.intro"></p>
+    <p class="muted small" data-i18n="c.what"></p>
+    <p class="muted small" data-i18n="c.where"></p>
+    <label class="chk"><input type="checkbox" id="cAdult"> <span data-i18n="c.adult"></span></label>
+    <label class="chk"><input type="checkbox" id="cSelf"> <span data-i18n="c.self"></span></label>
+    <label class="chk"><input type="checkbox" id="cMemoire"> <span data-i18n="c.memoire"></span></label>
+    <label class="chk"><input type="checkbox" id="cPub"> <span data-i18n="c.pub"></span></label>
+    <div class="row2">
+      <input id="cPseudo" maxlength="60" data-i18n-ph="c.pseudo">
+      <input id="cContact" maxlength="120" data-i18n-ph="c.contact">
+    </div>
+    <p class="warn" id="cErr" hidden></p>
+    <div class="row end">
+      <button class="btn ghost" value="cancel" data-i18n="c.cancel"></button>
+      <button class="btn primary" id="cSubmit" type="button" disabled data-i18n="c.submit"></button>
+    </div>
+  </form>
+  <div id="consentOk" hidden class="center">
+    <div class="big-ico">🙏</div>
+    <h2 data-i18n="c.ok.t"></h2>
+    <p data-i18n="c.ok.d"></p>
+    <div class="code" id="cCode"></div>
+    <div class="row center"><button class="btn" id="cCopy" data-i18n="c.copy"></button><button class="btn primary" id="cClose">OK</button></div>
+  </div>
+</dialog>
+
+<dialog id="explainDlg" class="dlg narrow">
+  <h2 data-i18n="photo.explain"></h2>
+  <p class="muted small" data-i18n="photo.explain.t"></p>
+  <div class="explain-imgs"><img id="exFace" alt=""><img id="exCam" alt=""></div>
+  <p class="center" id="exLabel"></p>
+  <div class="row center"><button class="btn primary" onclick="this.closest('dialog').close()">OK</button></div>
+</dialog>
+
+<video id="video" playsinline muted hidden></video>
+<script type="module" src="app.js"></script>
+</body>
+</html>

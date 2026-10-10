@@ -24,6 +24,8 @@ Exactitude (%) sur les jeux de test officiels. Détail complet (macro-F1, ablati
 
 👉 **Pour installer, évaluer, ré-entraîner ou lancer la démo : voir [GUIDE.md](GUIDE.md).**
 
+🎥 **Application web EmoVision** (webcam multi-visages, photo, défi des 7 émotions, comparaison des 3 modèles, FR/EN) : voir [app/README.md](app/README.md).
+
 ---
 
 ## Structure
