@@ -14,13 +14,18 @@
 <header class="topbar">
   <a class="brand" href="#home"><span class="brand-dot"></span>EmoVision</a>
   <nav class="nav">
-    <a href="#home" data-i18n="nav.home"></a>
-    <a href="#live" data-i18n="nav.live"></a>
-    <a href="#photo" data-i18n="nav.photo"></a>
-    <a href="#challenge" data-i18n="nav.challenge"></a>
-    <a href="#about" data-i18n="nav.about"></a>
+    <a href="#home"><i>🏠</i><span data-i18n="nav.home"></span></a>
+    <a href="#live"><i>🎥</i><span data-i18n="nav.live"></span></a>
+    <a href="#photo"><i>🖼️</i><span data-i18n="nav.photo"></span></a>
+    <a href="#challenge"><i>🏆</i><span data-i18n="nav.challenge"></span></a>
+    <a href="#guide"><i>📖</i><span data-i18n="nav.guide"></span></a>
+    <a href="#about" class="nav-about"><i>ℹ️</i><span data-i18n="nav.about"></span></a>
   </nav>
   <div class="tools">
+    <select id="modelSel" class="model-select" aria-label="Model">
+      <option value="resnet">ResNet-50</option><option value="vit">ViT-Base</option>
+      <option value="dbfn">DBFN</option><option value="compare" data-i18n="model.compare"></option>
+    </select>
     <div class="seg" id="modelSeg" role="radiogroup" aria-label="Model">
       <button data-model="resnet">ResNet-50</button>
       <button data-model="vit">ViT-Base</button>
@@ -52,7 +57,7 @@
       <div><b id="stFeedback">–</b><span data-i18n="stats.feedback"></span></div>
       <div><b id="stCorrect">–</b><span data-i18n="stats.correct"></span></div>
     </div>
-    <p class="privacy-note">🔒 <span data-i18n="privacy.short"></span></p>
+    <p class="privacy-note">🔒 <span data-i18n="privacy.short"></span> <a href="#about" data-i18n="nav.about"></a></p>
   </section>
 
   <!-- ======================= DIRECT ======================= -->
@@ -60,10 +65,11 @@
     <div class="live-grid">
       <div class="stage-wrap">
         <div class="stage" id="liveStage">
-          <canvas id="liveCanvas"></canvas>
+          <canvas id="liveCanvas" hidden></canvas>
           <div class="stage-empty" id="liveEmpty">
             <div class="big-ico">🎥</div>
             <p data-i18n="live.hint"></p>
+            <p><a href="#guide">📖 <span data-i18n="guide.link"></span></a></p>
             <button class="btn primary" id="liveStart" data-i18n="live.start"></button>
           </div>
         </div>
@@ -87,7 +93,7 @@
   <section class="view" id="view-photo">
     <div class="drop" id="drop">
       <div class="big-ico">🖼️</div>
-      <p><span data-i18n="photo.drop"></span> <label class="link"><input type="file" id="fileIn" accept="image/*" hidden><span data-i18n="photo.choose"></span></label></p>
+      <p><span class="drag-txt" data-i18n="photo.drop"></span> <label class="link pick"><input type="file" id="fileIn" accept="image/*" hidden><span data-i18n="photo.choose"></span></label></p>
       <button class="btn" id="photoSnap">📸 <span data-i18n="photo.snap"></span></button>
     </div>
     <div class="photo-res" id="photoRes" hidden>
@@ -106,11 +112,12 @@
     <div id="chIntro" class="ch-intro">
       <h1 data-i18n="ch.title"></h1>
       <p class="lead" data-i18n="ch.intro"></p>
+      <p><a href="#guide">📖 <span data-i18n="guide.link"></span></a></p>
       <div class="hero-emojis big" aria-hidden="true"><span>😠</span><span>🤢</span><span>😨</span><span>😄</span><span>😐</span><span>😢</span><span>😲</span></div>
       <button class="btn primary xl" id="chStart" data-i18n="ch.start"></button>
     </div>
     <div id="chRun" class="ch-run" hidden>
-      <div class="stage" id="chStage"><canvas id="chCanvas"></canvas>
+      <div class="stage" id="chStage"><canvas id="chCanvas" hidden></canvas>
         <div class="flash" id="chFlash"></div>
       </div>
       <div class="ch-side">
@@ -135,6 +142,15 @@
         <button class="btn primary" id="chContrib">🙌 <span data-i18n="contrib.btn"></span></button>
       </div>
     </div>
+  </section>
+
+  <!-- ======================= GUIDE ======================= -->
+  <section class="view" id="view-guide">
+    <h1 data-i18n="guide.title"></h1>
+    <p class="lead" data-i18n="guide.intro"></p>
+    <div class="tips" id="guideTips"></div>
+    <div class="guide-grid" id="guideGrid"></div>
+    <div class="actionbar"><a class="btn primary" href="#challenge">🏆 <span data-i18n="guide.try"></span></a></div>
   </section>
 
   <!-- ======================= À PROPOS ======================= -->

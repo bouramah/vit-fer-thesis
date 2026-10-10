@@ -36,7 +36,7 @@ async function api(path, body) {
 // =====================================================================
 function route() {
   const v = (location.hash || "#home").slice(1);
-  const name = ["home", "live", "photo", "challenge", "about"].includes(v) ? v : "home";
+  const name = ["home", "live", "photo", "challenge", "guide", "about"].includes(v) ? v : "home";
   if (state.view === "live" && name !== "live") live.stop();
   if (state.view === "challenge" && name !== "challenge") challenge.abort();
   state.view = name;
@@ -49,12 +49,14 @@ function route() {
 function setModel(m) {
   state.model = m;
   $$("#modelSeg button").forEach((b) => b.classList.toggle("on", b.dataset.model === m));
+  $("#modelSel").value = m;
   live.onModel();
   photo.onModel();
 }
 
 function initChrome() {
   $$("#modelSeg button").forEach((b) => b.addEventListener("click", () => setModel(b.dataset.model)));
+  $("#modelSel").addEventListener("change", (e) => setModel(e.target.value));
   $$("#langSeg button").forEach((b) => b.addEventListener("click", () => {
     setLang(b.dataset.lang);
     $$("#langSeg button").forEach((x) => x.classList.toggle("on", x.dataset.lang === getLang()));
@@ -221,12 +223,14 @@ class LiveEngine {
     await startCamera();
     const det = await getDetector();
     this.canvas.width = video.videoWidth; this.canvas.height = video.videoHeight;
+    this.canvas.hidden = false;
+    this.canvas.parentElement.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
     this.running = true;
     this.tracker = new Tracker();
     this.loopDetect(det);
     this.loopInfer();
   }
-  stop() { this.running = false; }
+  stop() { this.running = false; this.canvas.hidden = true; this.canvas.parentElement.style.aspectRatio = ""; }
   loopDetect(det) {
     let frames = 0, t0 = performance.now(), lastTs = -1;
     const tick = () => {
@@ -553,7 +557,7 @@ const challenge = (() => {
       $("#chStart").disabled = true;
       seq = shuffle([...CLASSES]); step = 0; results = [];
       $("#chIntro").hidden = true; $("#chEnd").hidden = true; $("#chRun").hidden = false;
-      $$("#modelSeg button").forEach((b) => (b.disabled = true));
+      $$("#modelSeg button").forEach((b) => (b.disabled = true)); $("#modelSel").disabled = true;
       await eng.start();
       active = true;
       showStep();
@@ -564,7 +568,7 @@ const challenge = (() => {
 
   function end() {
     active = false; eng.stop(); stopCamera();
-    $$("#modelSeg button").forEach((b) => (b.disabled = false));
+    $$("#modelSeg button").forEach((b) => (b.disabled = false)); $("#modelSel").disabled = false;
     $("#chRun").hidden = true; $("#chEnd").hidden = false;
     renderRecap();
   }
@@ -584,7 +588,7 @@ const challenge = (() => {
 
   function abort() {
     active = false; eng.stop(); stopCamera();
-    $$("#modelSeg button").forEach((b) => (b.disabled = false));
+    $$("#modelSeg button").forEach((b) => (b.disabled = false)); $("#modelSel").disabled = false;
     $("#chRun").hidden = true; $("#chEnd").hidden = true; $("#chIntro").hidden = false;
   }
 
@@ -597,6 +601,27 @@ const challenge = (() => {
   langHooks.push(() => { if (active) showStep(); renderRecap(); });
   return { abort: () => { if (active || eng.running) abort(); } };
 })();
+
+// =====================================================================
+// Guide des émotions
+// =====================================================================
+const GUIDE_TIPS = ["guide.tip1", "guide.tip2", "guide.tip3", "guide.tip4"];
+function renderGuide() {
+  $("#guideTips").innerHTML = GUIDE_TIPS.map((k) => `<div class="tip">${t(k)}</div>`).join("");
+  $("#guideGrid").innerHTML = CLASSES.map((c) => `
+    <article class="gcard" style="--c:${EMOTIONS[c].color}">
+      <header><span class="gemo">${EMOTIONS[c].emoji}</span><h3>${emoName(c)}</h3></header>
+      <ul>
+        <li><b>${t("guide.brows")}</b> ${t(`g.${c}.brows`)}</li>
+        <li><b>${t("guide.eyes")}</b> ${t(`g.${c}.eyes`)}</li>
+        <li><b>${t("guide.mouth")}</b> ${t(`g.${c}.mouth`)}</li>
+      </ul>
+      <p class="gtip">💡 ${t(`g.${c}.tip`)}</p>
+      <p class="gwarn">⚠️ ${t(`g.${c}.avoid`)}</p>
+    </article>`).join("");
+}
+renderGuide();
+langHooks.push(renderGuide);
 
 // =====================================================================
 // Consentement et contribution
