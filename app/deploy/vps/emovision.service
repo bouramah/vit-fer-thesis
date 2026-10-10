@@ -1,0 +1,18 @@
+# Service systemd d'EmoVision (déploiement sans Docker, derrière nginx)
+[Unit]
+Description=EmoVision (FastAPI)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/emovision
+EnvironmentFile=/etc/emovision.env
+ExecStart=/opt/emovision/.venv/bin/uvicorn app.server.main:app --host 127.0.0.1 --port 8002 --workers 1 --proxy-headers
+Restart=always
+RestartSec=5
+# Priorité processeur plus basse que les autres applications du serveur
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

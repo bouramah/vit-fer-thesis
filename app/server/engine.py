@@ -39,6 +39,10 @@ class Engine:
     def __init__(self, weights_path, threads=None, device="cpu"):
         self.device = torch.device(device)
         torch.set_num_threads(threads or max(1, os.cpu_count() or 1))
+        try:
+            torch.set_num_interop_threads(1)  # évite des threads concurrents (quota CPU des conteneurs)
+        except RuntimeError:
+            pass  # déjà fixé dans ce processus
         pack = torch.load(weights_path, map_location="cpu", weights_only=False)
         self.classes = pack["classes"]
 
