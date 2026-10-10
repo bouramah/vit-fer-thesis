@@ -35,9 +35,29 @@ def _load(module, sd, prefix=""):
     return module
 
 
+class OnnxBackbones:
+    """Réseaux lourds exécutés par ONNX Runtime (voir app/tools/export_onnx.py)."""
+
+    def __init__(self, onnx_dir, threads, int8_vit=False):
+        import onnxruntime as ort
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = threads
+        opts.inter_op_num_threads = 1
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        mk = lambda name: ort.InferenceSession(os.path.join(onnx_dir, name), opts, providers=["CPUExecutionProvider"])
+        self.resnet = mk("resnet.onnx")
+        self.vit = mk("vit_feat_int8.onnx" if int8_vit else "vit_feat.onnx")
+        self.dbfn_resnet = mk("dbfn_resnet.onnx")
+
+    @staticmethod
+    def run(sess, x):
+        return torch.from_numpy(sess.run(None, {"x": x.numpy()})[0])
+
+
 class Engine:
-    def __init__(self, weights_path, threads=None, device="cpu"):
+    def __init__(self, weights_path, threads=None, device="cpu", backend="torch", onnx_dir=None):
         self.device = torch.device(device)
+        self.backend = backend
         torch.set_num_threads(threads or max(1, os.cpu_count() or 1))
         try:
             torch.set_num_interop_threads(1)  # évite des threads concurrents (quota CPU des conteneurs)
@@ -61,6 +81,11 @@ class Engine:
             for p in m.parameters():
                 p.requires_grad_(False)
 
+        self.onnx = None
+        if backend in ("onnx", "onnx-int8"):
+            onnx_dir = onnx_dir or os.path.join(os.path.dirname(weights_path), "onnx")
+            self.onnx = OnnxBackbones(onnx_dir, threads or max(1, os.cpu_count() or 1), int8_vit=backend == "onnx-int8")
+
         self.tf = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.Grayscale(num_output_channels=3),
@@ -81,13 +106,23 @@ class Engine:
         t0 = time.perf_counter()
         out = {}
         need_vit = model in ("vit", "dbfn", "compare")
-        v = self.vit(x) if need_vit else None
-        if model in ("resnet", "compare"):
-            out["resnet"] = self.resnet_head(self.resnet(x))
-        if model in ("vit", "compare"):
-            out["vit"] = self.vit_head(v)
-        if model in ("dbfn", "compare"):
-            out["dbfn"] = self.fusion(self.dbfn_resnet(x), v)
+        if self.onnx:
+            o = self.onnx
+            v = o.run(o.vit, x) if need_vit else None
+            if model in ("resnet", "compare"):
+                out["resnet"] = o.run(o.resnet, x)
+            if model in ("vit", "compare"):
+                out["vit"] = self.vit_head(v)
+            if model in ("dbfn", "compare"):
+                out["dbfn"] = self.fusion(o.run(o.dbfn_resnet, x), v)
+        else:
+            v = self.vit(x) if need_vit else None
+            if model in ("resnet", "compare"):
+                out["resnet"] = self.resnet_head(self.resnet(x))
+            if model in ("vit", "compare"):
+                out["vit"] = self.vit_head(v)
+            if model in ("dbfn", "compare"):
+                out["dbfn"] = self.fusion(self.dbfn_resnet(x), v)
         ms = (time.perf_counter() - t0) * 1000
         return {k: F.softmax(t, dim=1).cpu().numpy() for k, t in out.items()}, ms
 

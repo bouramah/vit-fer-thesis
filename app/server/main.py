@@ -4,7 +4,8 @@ Variables d'environnement :
   EMOVISION_WEIGHTS   chemin du fichier de poids (app/weights/emovision_weights.pt)
   EMOVISION_YUNET     chemin du détecteur YuNet (.onnx)
   EMOVISION_DATA      dossier des contributions consenties (app/data)
-  EMOVISION_THREADS   nombre de threads PyTorch
+  EMOVISION_THREADS   nombre de threads de calcul
+  EMOVISION_BACKEND   torch (défaut), onnx ou onnx-int8 (ONNX Runtime, plus rapide sur CPU)
   ADMIN_PASSWORD      mot de passe de la page /admin (désactivée si vide)
   CONTACT_EMAIL       adresse affichée pour les demandes de retrait
 """
@@ -38,7 +39,8 @@ MAX_FACES = 8
 VALID_MODELS = ("resnet", "vit", "dbfn", "compare")
 
 app = FastAPI(title="EmoVision", docs_url=None, redoc_url=None)
-engine = Engine(WEIGHTS, threads=THREADS)
+BACKEND = os.environ.get("EMOVISION_BACKEND", "torch")  # torch | onnx | onnx-int8
+engine = Engine(WEIGHTS, threads=THREADS, backend=BACKEND)
 detector = FaceDetector(YUNET)
 storage = Storage(DATA)
 infer_lock = threading.Lock()
