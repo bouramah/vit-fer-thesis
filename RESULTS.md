@@ -9,6 +9,8 @@ Matériel : NVIDIA A100-40GB · PyTorch 2.5.1+cu121 · timm 1.0.24.
 
 ## 1. FER2013
 
+> **Jeu de test FER2013 :** 7 178 images = réunion des sous-ensembles **PublicTest** et **PrivateTest** (3 589 images chacun) de la compétition d'origine. Sur le seul PrivateTest, souvent utilisé dans la littérature, le DBFN de référence atteint **74,28 %** (macro-F1 73,24 %), contre 73,45 % sur le PublicTest.
+
 ### 1.1 Modèles individuels (test set, 7 178 images)
 
 | Modèle | Type | Params | Accuracy (%) | Macro-F1 (%) |
