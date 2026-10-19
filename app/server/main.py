@@ -25,7 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from .engine import Engine, overlay
-from .faces import CROP_DY, CROP_SCALE, FaceDetector, crop_face
+from .faces import CROP_DY, CROP_SCALE, FaceDetector, crop_box, crop_face
+from .quality import face_quality
 from .storage import CONSENT_VERSION, Storage, decode_image
 
 APP_DIR = Path(__file__).resolve().parent.parent
@@ -96,9 +97,15 @@ async def analyze(request: Request):
     boxes = detector.detect(np.array(img))[:MAX_FACES]
     faces = [crop_face(img, *b[:4]) for b in boxes]
     results, ms = _predict(faces, body.get("model", "dbfn")) if faces else ([], 0.0)
+    quality = []
+    for b, face in zip(boxes, faces):
+        left, top, _ = crop_box(*b[:4])
+        pts = [(x - left, y - top) for x, y in b[5]]  # points dans le repère du visage recadré
+        quality.append(face_quality(face, pts, face_px=max(b[2], b[3])))
     return {
         "width": img.width, "height": img.height, "latency_ms": round(ms, 1),
-        "faces": [{"box": [round(v, 1) for v in b[:4]], "score": round(b[4], 3), **r} for b, r in zip(boxes, results)],
+        "faces": [{"box": [round(v, 1) for v in b[:4]], "score": round(b[4], 3), "quality": q, **r}
+                  for b, q, r in zip(boxes, quality, results)],
     }
 
 
@@ -106,9 +113,18 @@ async def analyze(request: Request):
 async def explain(request: Request):
     body = await request.json()
     face = decode_image(body["face"], max_side=448)
+    model = body.get("model", "dbfn")
+    if model not in VALID_MODELS:
+        raise HTTPException(400, "bad_model")
     with infer_lock:
-        cam, cls = engine.gradcam(face)
-    return {"class": engine.classes[cls], "overlay": _b64(overlay(face.resize((224, 224)), cam))}
+        maps, cls = engine.explain(face, model)
+    base = face.resize((224, 224))
+    res = {"class": engine.classes[cls], "model": "dbfn" if model == "compare" else model,
+           "maps": {k: _b64(overlay(base, v)) for k, v in maps.items() if k != "share"}}
+    if "share" in maps:
+        res["share"] = maps["share"]
+    res["overlay"] = res["maps"].get("combined") or next(iter(res["maps"].values()))
+    return res
 
 
 @app.post("/api/contribute")

@@ -1,4 +1,4 @@
-import { EMOTIONS, MODELS, t, setLang, getLang, apply, emoName } from "./i18n.js";
+import { EMOTIONS, MODELS, t, setLang, getLang, apply, emoName } from "./i18n.js?v=20261019";
 
 const CLASSES = ["angry", "disgust", "fear", "happy", "neutral", "sad", "surprise"];
 const MP_VERSION = "0.10.14";
@@ -192,10 +192,12 @@ class Tracker {
         best[src === "mp" ? "mpSeen" : "srvSeen"] = now;
         if (d.res) smooth(best, d.res);
         if (d.shot) best.shot = d.shot;
+        if (d.quality) addQuality(best, d.quality);
       } else if (src === "srv") {
         const tr = { id: this.nextId++, box: { x: d.x, y: d.y, w: d.w, h: d.h }, srvSeen: now, mpSeen: 0, res: null };
         if (d.res) smooth(tr, d.res);
         if (d.shot) tr.shot = d.shot;
+        if (d.quality) addQuality(tr, d.quality);
         this.tracks.push(tr);
         used.add(tr);
       }
@@ -205,6 +207,23 @@ class Tracker {
   alive(tr, now) { return now - tr.srvSeen < 1200 || (now - tr.mpSeen < 250 && now - tr.srvSeen < 3000); }
   visible(now) { return this.tracks.filter((tr) => this.alive(tr, now)).slice(0, state.cfg.max_faces); }
   largest(now) { return this.visible(now).sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h)[0]; }
+}
+
+function addQuality(tr, q) {
+  tr.qhist = [...(tr.qhist || []), q.warnings || []].slice(-3);
+  const n = tr.qhist.length;
+  tr.warnings = [...new Set(tr.qhist.flat())].filter((w) => tr.qhist.filter((h) => h.includes(w)).length >= Math.min(2, n));
+}
+
+// Avertissements de qualité (flou, lumière, occultation…) affichés sous les probabilités.
+const Q_ORDER = ["mouth_hidden", "eyes_hidden", "pose", "small", "blur", "dark", "bright", "low_contrast", "noise"];
+function renderQuality(host, warnings) {
+  const w = Q_ORDER.filter((k) => (warnings || []).includes(k));
+  if (!w.length) return;
+  const div = document.createElement("div");
+  div.className = "qwarn";
+  div.innerHTML = `<b>⚠ ${t("q.title")}</b><ul>${w.map((k) => `<li>${t("q." + k)}</li>`).join("")}</ul>`;
+  host.appendChild(div);
 }
 
 function smooth(tr, res, alpha = 0.55) {
@@ -296,7 +315,7 @@ class LiveEngine {
     this.tracker.update(r.faces.map((f) => {
       const box = { x: f.box[0] * k, y: f.box[1] * k, w: f.box[2] * k, h: f.box[3] * k };
       const res = Object.fromEntries(["resnet", "vit", "dbfn"].filter((m) => f[m]).map((m) => [m, f[m]]));
-      return { ...box, res, shot: { frame: full, box, res, t } };
+      return { ...box, res, quality: f.quality, shot: { frame: full, box, res, t, warnings: (f.quality && f.quality.warnings) || [] } };
     }), performance.now(), "srv", 0.7);
   }
   pick(e) {
@@ -330,6 +349,7 @@ class LiveEngine {
       const labels = modelsOf(tr.res).length > 1
         ? modelsOf(tr.res).map((m) => `${MODELS[m].short} ${EMOTIONS[tr.res[m].top].emoji} ${Math.round(tr.res[m].confidence * 100)}%`)
         : [`${EMOTIONS[main.top].emoji} ${emoName(main.top)} ${Math.round(main.confidence * 100)}%`];
+      if (tr.warnings && tr.warnings.length) labels[labels.length - 1] += " ⚠";
       const fs = Math.max(16, Math.min(30, b.w / 9));
       ctx.font = `700 ${fs}px Inter, system-ui, sans-serif`;
       let y = b.y - 8 - (labels.length - 1) * (fs + 10);
@@ -364,6 +384,7 @@ const live = (() => {
       ? `${n} ${t("live.faces")} · ${t("live.infer")} ${Math.round(eng.srvFps || 0)} ${t("fps")} (${Math.round(eng.latency)} ${t("lat")})${eng.detFps ? ` · ${t("live.track")} ${eng.detFps} ${t("fps")}` : ""}`
       : t("live.noface");
     renderBars($("#livePanel"), cur && cur.res);
+    if (cur) renderQuality($("#livePanel"), cur.warnings);
   };
   async function start() {
     try {
@@ -444,7 +465,7 @@ const photo = (() => {
       roundRect(ctx, x, y, w, h, 12); ctx.stroke();
       const fs = Math.max(16, Math.min(40, w / 6));
       ctx.font = `800 ${fs}px Inter, system-ui, sans-serif`;
-      const lab = `${f.idx} ${EMOTIONS[main.top].emoji}`;
+      const lab = `${f.idx} ${EMOTIONS[main.top].emoji}${f.quality && f.quality.warnings.length ? " ⚠" : ""}`;
       const tw = ctx.measureText(lab).width;
       ctx.fillStyle = col; roundRect(ctx, x, y - fs - 12, tw + 16, fs + 10, 8); ctx.fill();
       ctx.fillStyle = "#0b1020"; ctx.fillText(lab, x + 8, y - 8);
@@ -454,6 +475,7 @@ const photo = (() => {
       card.innerHTML = `<div class="head"><img src="${f.crop}" alt=""><div><b>${t("photo.face")} ${f.idx}</b><br>
         <button class="btn ghost small-btn" data-ex>🔍 ${t("photo.explain")}</button></div></div><div class="b"></div><div class="fb"></div>`;
       renderBars($(".b", card), res);
+      renderQuality($(".b", card), f.quality && f.quality.warnings);
       $("[data-ex]", card).addEventListener("click", () => explain(f));
       feedbackWidget($(".fb", card), main.top, (label) => { f.true_label = label; });
       host.appendChild(card);
@@ -466,9 +488,13 @@ const photo = (() => {
     predictions: { resnet: f.resnet, vit: f.vit, dbfn: f.dbfn },
   }))));
   async function explain(f) {
-    const r = await api("/api/explain", { face: f.crop });
-    $("#exFace").src = f.crop; $("#exCam").src = r.overlay;
-    $("#exLabel").textContent = `DBFN : ${EMOTIONS[r.class].emoji} ${emoName(r.class)}`;
+    const r = await api("/api/explain", { face: f.crop, model: state.model });
+    const tiles = [["face", f.crop], ...["cnn", "vit", "combined"].filter((k) => r.maps[k]).map((k) => [k, r.maps[k]])];
+    $("#exMaps").innerHTML = tiles.map(([k, src]) => `<figure><img src="${src}" alt=""><figcaption>${t("ex." + k)}</figcaption></figure>`).join("");
+    $("#exMaps").dataset.n = tiles.length;
+    $("#exText").textContent = t("ex.text." + r.model);
+    $("#exShare").textContent = r.share ? t("ex.share").replace("{cnn}", Math.round(r.share.cnn * 100)).replace("{vit}", Math.round(r.share.vit * 100)) : "";
+    $("#exLabel").textContent = `${MODELS[r.model].name} : ${EMOTIONS[r.class].emoji} ${emoName(r.class)}`;
     $("#explainDlg").showModal();
   }
   // Glisser-déposer et sélection de fichier

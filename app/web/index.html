@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🙂</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261019">
 </head>
 <body>
 <header class="topbar">
@@ -237,13 +237,14 @@
 
 <dialog id="explainDlg" class="dlg narrow">
   <h2 data-i18n="photo.explain"></h2>
-  <p class="muted small" data-i18n="photo.explain.t"></p>
-  <div class="explain-imgs"><img id="exFace" alt=""><img id="exCam" alt=""></div>
+  <p class="muted small" id="exText"></p>
+  <div class="explain-imgs" id="exMaps"></div>
+  <p class="muted small center" id="exShare"></p>
   <p class="center" id="exLabel"></p>
   <div class="row center"><button class="btn primary" onclick="this.closest('dialog').close()">OK</button></div>
 </dialog>
 
 <video id="video" playsinline muted hidden></video>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=20261019"></script>
 </body>
 </html>

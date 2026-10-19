@@ -7,6 +7,8 @@ Application de démonstration du mémoire : reconnaissance des expressions facia
 - **Direct** : plusieurs visages suivis en temps réel, étiquette et confiance par visage, barres de probabilité.
 - **Photo** : photos de groupe, explication visuelle Grad-CAM, retour « la prédiction est-elle juste ? ».
 - **Défi des 7 émotions** : l'application demande chaque émotion et capture l'image dès que le DBFN la reconnaît ; récapitulatif par modèle.
+- **Contrôle de qualité** : chaque visage est vérifié (flou, lumière, bruit, taille, orientation de la tête, yeux cachés par des lunettes de soleil, bas du visage caché par un masque) ; un avertissement s'affiche à côté de la prédiction, sans la bloquer (`server/quality.py`).
+- **Explication propre à chaque modèle** : Grad-CAM pour ResNet-50, attention pondérée par le gradient (Chefer et al., 2021) pour ViT-Base, et pour le DBFN une carte par branche, leur part dans la décision et une carte combinée.
 - **Contributions consenties** : rien n'est conservé sans accord explicite (18 ans ou plus, personne photographiée ou accord de chacun, usage dans le mémoire). Un code permet le retrait à tout moment.
 - **Administration** (`/admin`, mot de passe) : consultation, export zip, suppression.
 
@@ -20,6 +22,8 @@ Application de démonstration du mémoire : reconnaissance des expressions facia
 | `server/storage.py` | Contributions consenties et retours anonymes. |
 | `web/` | Interface (HTML/JS, sans compilation). MediaPipe, chargé depuis un CDN, sert uniquement à animer les cadres entre deux analyses du serveur. |
 | `tools/build_weights.py` | Assemble les trois modèles en un fichier de 257 Mo (ViT partagé, float16). |
+| `tools/robustness_test.py` | Exactitude des trois modèles sous occultations (lunettes, masque) et dégradations (flou, faible lumière, bruit, petit visage) simulées sur FER2013. |
+| `tools/quality_calibration.py` | Taux de détection et de fausses alertes des avertissements de qualité. |
 | `tools/make_annex.py` | Produit les figures et l'exactitude par modèle pour l'annexe du mémoire, à partir des seules contributions consenties. |
 
 Latence mesurée sur CPU (Apple M3 Max, 4 threads) : 22 ms par visage pour ResNet-50, 42 ms pour ViT-Base, 63 ms pour le DBFN, 120 ms pour les trois.

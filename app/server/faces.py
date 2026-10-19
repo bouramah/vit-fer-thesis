@@ -22,7 +22,7 @@ class FaceDetector:
         self._det = None
 
     def detect(self, rgb):
-        """rgb : tableau numpy HxWx3. Renvoie une liste de (x, y, w, h, score)."""
+        """rgb : tableau numpy HxWx3. Renvoie une liste de (x, y, w, h, score, points)."""
         h, w = rgb.shape[:2]
         scale = min(1.0, 1280 / max(h, w))
         img = cv2.resize(rgb, (int(w * scale), int(h * scale))) if scale < 1 else rgb
@@ -34,7 +34,9 @@ class FaceDetector:
             _, faces = self._det.detect(bgr)
         if faces is None:
             return []
-        return [(float(f[0] / scale), float(f[1] / scale), float(f[2] / scale), float(f[3] / scale), float(f[14])) for f in faces]
+        # (x, y, w, h, score, points) ; points = yeux droit et gauche, nez, coins droit et gauche de la bouche
+        return [(float(f[0] / scale), float(f[1] / scale), float(f[2] / scale), float(f[3] / scale), float(f[14]),
+                 (f[4:14].reshape(5, 2) / scale).tolist()) for f in faces]
 
 
 def crop_box(x, y, w, h, scale=CROP_SCALE, dy=CROP_DY):

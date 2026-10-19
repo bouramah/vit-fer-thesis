@@ -126,32 +126,110 @@ class Engine:
         ms = (time.perf_counter() - t0) * 1000
         return {k: F.softmax(t, dim=1).cpu().numpy() for k, t in out.items()}, ms
 
-    def gradcam(self, face, cls=None):
-        """Grad-CAM sur le dernier étage (layer4) du ResNet-50 du DBFN.
-        Renvoie une carte 224×224 normalisée dans [0, 1] et la classe expliquée."""
+    # ------------------------------------------------------------------ explicabilité
+    @staticmethod
+    def _norm(cam):
+        cam = cam - cam.min()
+        return cam / (cam.max() + 1e-8)
+
+    def _cam_hooks(self, layer):
+        """Capture les activations et gradients d'un étage convolutif (Grad-CAM)."""
+        store = {}
+        h1 = layer.register_forward_hook(lambda m, i, o: store.__setitem__("a", o))
+        h2 = layer.register_full_backward_hook(lambda m, gi, go: store.__setitem__("g", go[0]))
+        return store, (h1, h2)
+
+    def _cam_from(self, store):
+        w = store["g"].mean(dim=(2, 3), keepdim=True)
+        cam = F.relu((w * store["a"]).sum(1, keepdim=True))
+        cam = F.interpolate(cam, size=(224, 224), mode="bilinear", align_corners=False)[0, 0]
+        return self._norm(cam).detach().cpu().numpy()
+
+    def _attn_hooks(self):
+        """Capture les cartes d'attention de chaque bloc du ViT et leurs gradients."""
+        maps, hooks = [], []
+        for blk in self.vit.blocks:
+            blk.attn.fused_attn = False  # matrice d'attention explicite (le calcul fusionné ne l'expose pas)
+
+            def fwd(m, i, o):
+                o.retain_grad()
+                maps.append(o)
+            hooks.append(blk.attn.attn_drop.register_forward_hook(fwd))
+        return maps, hooks
+
+    def _rollout_from(self, maps):
+        """Attribution du ViT propre à la classe (Chefer et al., 2021) :
+        attention pondérée par son gradient, propagée bloc par bloc."""
+        n = maps[0].shape[-1]
+        r = torch.eye(n)
+        for a in maps:
+            g = a.grad[0]
+            cam = (g * a[0]).clamp(min=0).mean(0).detach()
+            r = r + cam @ r
+        side = int(round((n - 1) ** 0.5))
+        m = r[0, 1:].reshape(side, side).numpy()
+        # Quelques patchs isolés, souvent dans le fond, concentrent l'attention sans rapport avec le visage
+        # (artefact connu des ViT : Darcet et al., 2024). Un filtre médian 3×3 sur la grille des patchs
+        # retire ces points isolés et garde les zones cohérentes.
+        import cv2
+        m = cv2.medianBlur(m.astype(np.float32), 3)
+        m = torch.from_numpy(m).reshape(1, 1, side, side)
+        m = F.interpolate(m, size=(224, 224), mode="bilinear", align_corners=False)[0, 0]
+        return self._norm(m).cpu().numpy()
+
+    def explain(self, face, model="dbfn", cls=None):
+        """Explication de la décision pour un visage.
+        resnet : Grad-CAM sur le dernier étage ; vit : attribution d'attention pondérée par le gradient ;
+        dbfn : les deux cartes (une par branche), leur part dans la décision et une carte combinée."""
+        model = "dbfn" if model == "compare" else model
         x = self.batch([face])
-        acts, grads = {}, {}
-        layer = self.dbfn_resnet.layer4
-        h1 = layer.register_forward_hook(lambda m, i, o: acts.__setitem__("a", o))
-        h2 = layer.register_full_backward_hook(lambda m, gi, go: grads.__setitem__("g", go[0]))
+        out = {}
+        hooks = []
         try:
             with torch.enable_grad():
-                x.requires_grad_(True)
-                feats = self.dbfn_resnet(x)
-                with torch.no_grad():
-                    v = self.vit(x)
-                logits = self.fusion(feats, v)
-                cls = int(logits.argmax(1)) if cls is None else cls
-                logits[0, cls].backward()
+                x.requires_grad_(True)  # les poids sont gelés : le gradient part de l'image
+                if model == "resnet":
+                    store, hooks = self._cam_hooks(self.resnet.layer4)
+                    logits = self.resnet_head(self.resnet(x))
+                    cls = int(logits.argmax(1)) if cls is None else cls
+                    logits[0, cls].backward()
+                    out["cnn"] = self._cam_from(store)
+                elif model == "vit":
+                    maps, hooks = self._attn_hooks()
+                    logits = self.vit_head(self.vit(x))
+                    cls = int(logits.argmax(1)) if cls is None else cls
+                    logits[0, cls].backward()
+                    out["vit"] = self._rollout_from(maps)
+                else:
+                    store, h1 = self._cam_hooks(self.dbfn_resnet.layer4)
+                    maps, h2 = self._attn_hooks()
+                    hooks = list(h1) + h2
+                    fc = self.dbfn_resnet(x)
+                    fv = self.vit(x)
+                    fc.retain_grad()
+                    fv.retain_grad()
+                    logits = self.fusion(fc, fv)
+                    cls = int(logits.argmax(1)) if cls is None else cls
+                    logits[0, cls].backward()
+                    out["cnn"] = self._cam_from(store)
+                    out["vit"] = self._rollout_from(maps)
+                    # Part de chaque branche : |gradient × caractéristique| sommé sur son vecteur
+                    sc = float((fc.grad * fc).abs().sum().detach())
+                    sv = float((fv.grad * fv).abs().sum().detach())
+                    share = sc / max(1e-8, sc + sv)
+                    out["share"] = {"cnn": round(share, 3), "vit": round(1 - share, 3)}
+                    out["combined"] = self._norm(share * out["cnn"] + (1 - share) * out["vit"])
         finally:
-            h1.remove()
-            h2.remove()
-        w = grads["g"].mean(dim=(2, 3), keepdim=True)
-        cam = F.relu((w * acts["a"]).sum(1, keepdim=True))
-        cam = F.interpolate(cam, size=(224, 224), mode="bilinear", align_corners=False)[0, 0]
-        cam = cam - cam.min()
-        cam = cam / (cam.max() + 1e-8)
-        return cam.detach().cpu().numpy(), cls
+            for h in hooks:
+                h.remove()
+            for blk in self.vit.blocks:
+                blk.attn.fused_attn = True
+        return out, cls
+
+    def gradcam(self, face, cls=None):
+        """Grad-CAM de la branche ResNet-50 du DBFN (compatibilité)."""
+        out, cls = self.explain(face, "dbfn", cls)
+        return out["cnn"], cls
 
 
 def overlay(face, cam, alpha=0.45):
